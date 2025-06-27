@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#2e7d32">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.json">
+  <title>🌾 Seed Sales Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 15px;
+      background: #f4f4f4;
+      margin: 0;
+    }
+
+    h2 {
+      color: #2e7d32;
+      margin-bottom: 15px;
+      font-size: 24px;
+      text-align: center;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 15px;
+    }
+
+    .input-group label {
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    input {
+      padding: 12px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      padding: 12px;
+      font-size: 16px;
+      background-color: #2e7d32;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+
+    button:hover {
+      background-color: #256429;
+    }
+
+    .section {
+      background: white;
+      padding: 15px;
+      margin-top: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      font-size: 14px;
+    }
+
+    th {
+      background: #2e7d32;
+      color: white;
+    }
+
+    @media (min-width: 600px) {
+      .input-group {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .input-group label {
+        flex: 1;
+        margin-right: 10px;
+      }
+
+      input, button {
+        flex: 1;
+        margin-right: 10px;
+        margin-bottom: 0;
+      }
+
+      button:last-child {
+        margin-right: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h2>🌾 Seed Sales Tracker</h2>
+
+  <div class="input-group">
+    <label>Farmer Name: <input type="text" id="farmerName"></label>
+    <label>Seed Name: 
+      <input type="text" id="seedName" list="seedSuggestions">
+      <datalist id="seedSuggestions"></datalist>
+    </label>
+    <button onclick="addSale()">➕ Add Sale</button>
+  </div>
+
+  <div class="input-group">
+    <label>Search Farmer: <input type="text" id="searchFarmer"></label>
+    <button onclick="searchFarmer()">🔍 Search</button>
+    <button onclick="showHome()">🏠 Home</button>
+  </div>
+
+  <div class="section" id="output"></div>
+  <div class="section" id="homeSummary"></div>
+
+  <script>
+    let sales = JSON.parse(localStorage.getItem("sales")) || [];
+
+    function getTodayDate() {
+      return new Date().toISOString().split('T')[0];
+    }
+
+    function capitalizeName(name) {
+      return name
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    }
+
+    function updateSeedSuggestions() {
+      const seedSet = new Set(sales.map(s => capitalizeName(s.seed)));
+      const datalist = document.getElementById('seedSuggestions');
+      datalist.innerHTML = '';
+      seedSet.forEach(seed => {
+        const option = document.createElement('option');
+        option.value = seed;
+        datalist.appendChild(option);
+      });
+    }
+
+    function addSale() {
+      const farmerRaw = document.getElementById('farmerName').value.trim();
+      const seedRaw = document.getElementById('seedName').value.trim();
+      const date = getTodayDate();
+
+      if (!farmerRaw || !seedRaw) {
+        alert("Please fill all fields.");
+        return;
+      }
+
+      const farmer = capitalizeName(farmerRaw);
+      const seed = capitalizeName(seedRaw);
+
+      let existing = sales.find(s =>
+        s.farmer.toLowerCase() === farmer.toLowerCase() &&
+        s.seed.toLowerCase() === seed.toLowerCase()
+      );
+
+      if (existing) {
+        existing.count += 1;
+        existing.date = date;
+      } else {
+        sales.push({ farmer, seed, date, count: 1 });
+      }
+
+      localStorage.setItem("sales", JSON.stringify(sales));
+      alert("Sale recorded!");
+      document.getElementById('farmerName').value = "";
+      document.getElementById('seedName').value = "";
+
+      updateSeedSuggestions();
+      showHome();
+    }
+
+    function searchFarmer() {
+      const nameRaw = document.getElementById('searchFarmer').value.trim();
+      const output = document.getElementById('output');
+      output.innerHTML = "";
+
+      if (!nameRaw) {
+        alert("Enter a farmer name to search.");
+        return;
+      }
+
+      const name = capitalizeName(nameRaw);
+      const filtered = sales.filter(s => s.farmer.toLowerCase() === name.toLowerCase());
+
+      document.getElementById('farmerName').value = name;
+
+      if (filtered.length === 0) {
+        output.innerHTML = `<h3>🔍 Search Results</h3><p>No records found for <b>${name}</b>. You can add a new sale above.</p>`;
+      } else {
+        const totalForFarmer = filtered.reduce((sum, s) => sum + s.count, 0);
+
+        let html = `<h3>🔍 Search Results for <span style="color:#2e7d32;">${name}</span></h3>`;
+        html += `<p><b>Total Seeds Taken:</b> ${totalForFarmer}</p>`;
+        html += `<table><tr><th>Seed Name</th><th>Quantity</th><th>Last Date</th><th>Action</th></tr>`;
+
+        filtered.forEach(s => {
+          html += `<tr>
+            <td>${s.seed}</td>
+            <td>${s.count}</td>
+            <td>${s.date}</td>
+            <td><button onclick="deleteSale('${s.farmer}', '${s.seed}')">➖ Return</button></td>
+          </tr>`;
+        });
+
+        html += `</table>`;
+        output.innerHTML = html;
+      }
+
+      document.getElementById('homeSummary').innerHTML = "";
+      document.getElementById('seedName').focus();
+    }
+
+    function deleteSale(farmer, seed) {
+      const index = sales.findIndex(s =>
+        s.farmer === farmer && s.seed === seed
+      );
+
+      if (index !== -1) {
+        if (sales[index].count > 1) {
+          sales[index].count -= 1;
+        } else {
+          sales.splice(index, 1);
+        }
+        localStorage.setItem("sales", JSON.stringify(sales));
+        alert("Seed returned.");
+        updateSeedSuggestions();
+        searchFarmer();
+        showHome();
+      }
+    }
+
+    function showHome() {
+      const summary = {};
+      let total = 0;
+
+      sales.forEach(s => {
+        const farmer = capitalizeName(s.farmer);
+        summary[farmer] = (summary[farmer] || 0) + s.count;
+        total += s.count;
+      });
+
+      let html = `<h3>🏠 Home Summary</h3>`;
+      html += `<p><b>Total Seed Entries:</b> ${total}</p>`;
+      html += `<table><tr><th>Farmer</th><th>Total Seeds</th></tr>`;
+      for (let farmer in summary) {
+        html += `<tr><td>${farmer}</td><td>${summary[farmer]}</td></tr>`;
+      }
+      html += `</table>`;
+
+      document.getElementById('homeSummary').innerHTML = html;
+      document.getElementById('output').innerHTML = "";
+    }
+
+    showHome();
+    updateSeedSuggestions();
+  </script>
+
+</body>
+</html>
