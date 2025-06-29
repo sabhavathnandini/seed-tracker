@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -116,6 +117,7 @@
       <input type="text" id="seedName" list="seedSuggestions">
       <datalist id="seedSuggestions"></datalist>
     </label>
+    <label>Packet Count: <input type="number" id="packetCount" min="1" value="1"></label>
     <button onclick="addSale()">➕ Add Sale</button>
   </div>
 
@@ -157,10 +159,11 @@
     function addSale() {
       const farmerRaw = document.getElementById('farmerName').value.trim();
       const seedRaw = document.getElementById('seedName').value.trim();
+      const packetCount = parseInt(document.getElementById('packetCount').value.trim(), 10);
       const date = getTodayDate();
 
-      if (!farmerRaw || !seedRaw) {
-        alert("Please fill all fields.");
+      if (!farmerRaw || !seedRaw || isNaN(packetCount) || packetCount < 1) {
+        alert("Please fill all fields correctly.");
         return;
       }
 
@@ -173,16 +176,18 @@
       );
 
       if (existing) {
-        existing.count += 1;
+        existing.count += packetCount;
         existing.date = date;
       } else {
-        sales.push({ farmer, seed, date, count: 1 });
+        sales.push({ farmer, seed, date, count: packetCount });
       }
 
       localStorage.setItem("sales", JSON.stringify(sales));
-      alert("Sale recorded!");
+      alert(`${packetCount} packet(s) recorded for ${farmer}!`);
+
       document.getElementById('farmerName').value = "";
       document.getElementById('seedName').value = "";
+      document.getElementById('packetCount').value = "1";
 
       updateSeedSuggestions();
       showHome();
