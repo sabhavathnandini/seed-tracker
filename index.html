@@ -1,13 +1,8 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#2e7d32">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="mobile-web-app-capable" content="yes">
-  <link rel="manifest" href="manifest.json">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🌾 Seed Sales Tracker</title>
   <style>
     body {
@@ -19,51 +14,72 @@
 
     h2 {
       color: #2e7d32;
-      margin-bottom: 15px;
-      font-size: 24px;
       text-align: center;
     }
 
     .input-group {
-      display: flex;
-      flex-direction: column;
-      margin-bottom: 15px;
+      background: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
 
-    .input-group label {
-      margin-bottom: 5px;
+    label {
       font-weight: bold;
-    }
-
-    input {
-      padding: 12px;
-      font-size: 16px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
+      display: block;
       margin-bottom: 10px;
     }
 
+    input[type="text"], input[type="number"] {
+      padding: 10px;
+      font-size: 16px;
+      margin: 5px 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .seed-entry {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .seed-entry input[type="text"],
+    .seed-entry input[type="number"] {
+      flex: 1;
+    }
+
+    .seed-entry button {
+      background-color: #d32f2f;
+      padding: 6px 10px;
+      font-size: 14px;
+    }
+
     button {
-      padding: 12px;
+      padding: 10px 16px;
       font-size: 16px;
       background-color: #2e7d32;
       color: white;
       border: none;
       border-radius: 6px;
       cursor: pointer;
-      margin-bottom: 10px;
+      margin-top: 10px;
     }
 
     button:hover {
       background-color: #256429;
     }
 
-    .section {
-      background: white;
-      padding: 15px;
-      margin-top: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
     }
 
     table {
@@ -73,129 +89,131 @@
     }
 
     th, td {
-      border: 1px solid #ddd;
       padding: 10px;
-      font-size: 14px;
+      border: 1px solid #ccc;
+      text-align: center;
     }
 
     th {
-      background: #2e7d32;
+      background-color: #2e7d32;
       color: white;
     }
 
-    @media (min-width: 600px) {
-      .input-group {
-        flex-direction: row;
-        flex-wrap: wrap;
-        align-items: center;
-      }
-
-      .input-group label {
-        flex: 1;
-        margin-right: 10px;
-      }
-
-      input, button {
-        flex: 1;
-        margin-right: 10px;
-        margin-bottom: 0;
-      }
-
-      button:last-child {
-        margin-right: 0;
+    @media (max-width: 600px) {
+      .seed-entry {
+        flex-direction: column;
+        align-items: stretch;
       }
     }
   </style>
 </head>
 <body>
-
   <h2>🌾 Seed Sales Tracker</h2>
 
   <div class="input-group">
-    <label>Farmer Name: <input type="text" id="farmerName"></label>
-    <label>Seed Name: 
-      <input type="text" id="seedName" list="seedSuggestions">
-      <datalist id="seedSuggestions"></datalist>
-    </label>
-    <label>Packet Count: <input type="number" id="packetCount" min="1" value="1"></label>
-    <button onclick="addSale()">➕ Add Sale</button>
+    <label for="farmerName">Farmer Name</label>
+    <input type="text" id="farmerName" placeholder="Enter farmer name" />
+    <div id="seedList"></div>
+
+    <div class="button-row">
+      <button onclick="addSeedRow()">➕ Add Seed</button>
+      <button onclick="submitAll()">✅ Submit All</button>
+    </div>
   </div>
 
   <div class="input-group">
-    <label>Search Farmer: <input type="text" id="searchFarmer"></label>
-    <button onclick="searchFarmer()">🔍 Search</button>
-    <button onclick="showHome()">🏠 Home</button>
+    <label for="searchFarmer">Search Farmer</label>
+    <input type="text" id="searchFarmer" placeholder="Enter farmer name to search" />
+    <div class="button-row">
+      <button onclick="searchFarmer()">🔍 Search</button>
+      <button onclick="showHome()">🏠 Home</button>
+    </div>
   </div>
 
-  <div class="section" id="output"></div>
-  <div class="section" id="homeSummary"></div>
+  <div class="input-group" id="output"></div>
+  <div class="input-group" id="homeSummary"></div>
 
   <script>
     let sales = JSON.parse(localStorage.getItem("sales")) || [];
 
-    function getTodayDate() {
-      return new Date().toISOString().split('T')[0];
+    function capitalizeName(name) {
+      return name.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     }
 
-    function capitalizeName(name) {
-      return name
-        .toLowerCase()
-        .split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
+    function getTodayDate() {
+      return new Date().toISOString().split("T")[0];
+    }
+
+    function addSeedRow() {
+      const div = document.createElement("div");
+      div.className = "seed-entry";
+      div.innerHTML = `
+        <input type="text" placeholder="Seed Name" class="seedName" list="seedSuggestions" />
+        <input type="number" placeholder="Packets" class="seedCount" min="1" value="1" />
+        <button onclick="this.parentNode.remove()">❌</button>
+        <datalist id="seedSuggestions"></datalist>
+      `;
+      document.getElementById("seedList").appendChild(div);
+      updateSeedSuggestions();
     }
 
     function updateSeedSuggestions() {
-      const seedSet = new Set(sales.map(s => capitalizeName(s.seed)));
-      const datalist = document.getElementById('seedSuggestions');
-      datalist.innerHTML = '';
-      seedSet.forEach(seed => {
-        const option = document.createElement('option');
-        option.value = seed;
-        datalist.appendChild(option);
+      const seeds = [...new Set(sales.map(s => capitalizeName(s.seed)))];
+      document.querySelectorAll(".seedName").forEach(input => {
+        const datalist = input.nextElementSibling.nextElementSibling.nextElementSibling;
+        datalist.innerHTML = '';
+        seeds.forEach(seed => {
+          const opt = document.createElement("option");
+          opt.value = seed;
+          datalist.appendChild(opt);
+        });
       });
     }
 
-    function addSale() {
-      const farmerRaw = document.getElementById('farmerName').value.trim();
-      const seedRaw = document.getElementById('seedName').value.trim();
-      const packetCount = parseInt(document.getElementById('packetCount').value.trim(), 10);
-      const date = getTodayDate();
+    function submitAll() {
+      const farmerRaw = document.getElementById("farmerName").value.trim();
+      const farmer = capitalizeName(farmerRaw);
+      const rows = document.querySelectorAll("#seedList .seed-entry");
 
-      if (!farmerRaw || !seedRaw || isNaN(packetCount) || packetCount < 1) {
-        alert("Please fill all fields correctly.");
+      if (!farmerRaw || rows.length === 0) {
+        alert("Please enter farmer name and at least one seed.");
         return;
       }
 
-      const farmer = capitalizeName(farmerRaw);
-      const seed = capitalizeName(seedRaw);
+      const date = getTodayDate();
 
-      let existing = sales.find(s =>
-        s.farmer.toLowerCase() === farmer.toLowerCase() &&
-        s.seed.toLowerCase() === seed.toLowerCase()
-      );
+      rows.forEach(row => {
+        const seedRaw = row.querySelector(".seedName").value.trim();
+        const count = parseInt(row.querySelector(".seedCount").value);
 
-      if (existing) {
-        existing.count += packetCount;
-        existing.date = date;
-      } else {
-        sales.push({ farmer, seed, date, count: packetCount });
-      }
+        if (seedRaw && count > 0) {
+          const seed = capitalizeName(seedRaw);
+          const existing = sales.find(s =>
+            s.farmer.toLowerCase() === farmer.toLowerCase() &&
+            s.seed.toLowerCase() === seed.toLowerCase()
+          );
+
+          if (existing) {
+            existing.count += count;
+            existing.date = date;
+          } else {
+            sales.push({ farmer, seed, count, date });
+          }
+        }
+      });
 
       localStorage.setItem("sales", JSON.stringify(sales));
-      alert(`${packetCount} packet(s) recorded for ${farmer}!`);
-
-      document.getElementById('farmerName').value = "";
-      document.getElementById('seedName').value = "";
-      document.getElementById('packetCount').value = "1";
-
+      alert("All seed entries recorded!");
+      document.getElementById("farmerName").value = "";
+      document.getElementById("seedList").innerHTML = "";
+      addSeedRow();
       updateSeedSuggestions();
       showHome();
     }
 
     function searchFarmer() {
-      const nameRaw = document.getElementById('searchFarmer').value.trim();
-      const output = document.getElementById('output');
+      const nameRaw = document.getElementById("searchFarmer").value.trim();
+      const output = document.getElementById("output");
       output.innerHTML = "";
 
       if (!nameRaw) {
@@ -206,39 +224,32 @@
       const name = capitalizeName(nameRaw);
       const filtered = sales.filter(s => s.farmer.toLowerCase() === name.toLowerCase());
 
-      document.getElementById('farmerName').value = name;
-
       if (filtered.length === 0) {
-        output.innerHTML = `<h3>🔍 Search Results</h3><p>No records found for <b>${name}</b>. You can add a new sale above.</p>`;
+        output.innerHTML = `<p>No records found for <b>${name}</b>.</p>`;
       } else {
-        const totalForFarmer = filtered.reduce((sum, s) => sum + s.count, 0);
-
-        let html = `<h3>🔍 Search Results for <span style="color:#2e7d32;">${name}</span></h3>`;
-        html += `<p><b>Total Seeds Taken:</b> ${totalForFarmer}</p>`;
-        html += `<table><tr><th>Seed Name</th><th>Quantity</th><th>Last Date</th><th>Action</th></tr>`;
-
+        let html = `<h3>Records for ${name}</h3>`;
+        html += `<table><tr><th>Seed</th><th>Packets</th><th>Date</th><th>Actions</th></tr>`;
         filtered.forEach(s => {
           html += `<tr>
             <td>${s.seed}</td>
             <td>${s.count}</td>
             <td>${s.date}</td>
-            <td><button onclick="deleteSale('${s.farmer}', '${s.seed}')">➖ Return</button></td>
+            <td>
+              <button onclick="returnOne('${s.farmer}', '${s.seed}')">➖ Return</button>
+              <button onclick="deleteCompletely('${s.farmer}', '${s.seed}')">🗑️ Delete</button>
+            </td>
           </tr>`;
         });
-
         html += `</table>`;
+        html += `<button onclick="deleteFarmerCompletely('${name}')">🧹 Delete Farmer</button>`;
         output.innerHTML = html;
       }
 
-      document.getElementById('homeSummary').innerHTML = "";
-      document.getElementById('seedName').focus();
+      document.getElementById("homeSummary").innerHTML = "";
     }
 
-    function deleteSale(farmer, seed) {
-      const index = sales.findIndex(s =>
-        s.farmer === farmer && s.seed === seed
-      );
-
+    function returnOne(farmer, seed) {
+      const index = sales.findIndex(s => s.farmer === farmer && s.seed === seed);
       if (index !== -1) {
         if (sales[index].count > 1) {
           sales[index].count -= 1;
@@ -246,9 +257,27 @@
           sales.splice(index, 1);
         }
         localStorage.setItem("sales", JSON.stringify(sales));
-        alert("Seed returned.");
-        updateSeedSuggestions();
         searchFarmer();
+        showHome();
+      }
+    }
+
+    function deleteCompletely(farmer, seed) {
+      const index = sales.findIndex(s => s.farmer === farmer && s.seed === seed);
+      if (index !== -1) {
+        sales.splice(index, 1);
+        localStorage.setItem("sales", JSON.stringify(sales));
+        searchFarmer();
+        showHome();
+      }
+    }
+
+    function deleteFarmerCompletely(farmer) {
+      if (confirm(`Are you sure you want to delete all records for ${farmer}?`)) {
+        sales = sales.filter(s => s.farmer.toLowerCase() !== farmer.toLowerCase());
+        localStorage.setItem("sales", JSON.stringify(sales));
+        alert(`${farmer} has been removed from the system.`);
+        document.getElementById("output").innerHTML = "";
         showHome();
       }
     }
@@ -256,28 +285,25 @@
     function showHome() {
       const summary = {};
       let total = 0;
-
       sales.forEach(s => {
-        const farmer = capitalizeName(s.farmer);
-        summary[farmer] = (summary[farmer] || 0) + s.count;
+        const f = capitalizeName(s.farmer);
+        summary[f] = (summary[f] || 0) + s.count;
         total += s.count;
       });
 
-      let html = `<h3>🏠 Home Summary</h3>`;
-      html += `<p><b>Total Seed Entries:</b> ${total}</p>`;
-      html += `<table><tr><th>Farmer</th><th>Total Seeds</th></tr>`;
-      for (let farmer in summary) {
-        html += `<tr><td>${farmer}</td><td>${summary[farmer]}</td></tr>`;
+      let html = `<h3>Home Summary</h3>`;
+      html += `<p><b>Total Packets:</b> ${total}</p>`;
+      html += `<table><tr><th>Farmer</th><th>Total Packets</th></tr>`;
+      for (let f in summary) {
+        html += `<tr><td>${f}</td><td>${summary[f]}</td></tr>`;
       }
       html += `</table>`;
-
-      document.getElementById('homeSummary').innerHTML = html;
-      document.getElementById('output').innerHTML = "";
+      document.getElementById("homeSummary").innerHTML = html;
     }
 
+    // Initialize
     showHome();
-    updateSeedSuggestions();
+    addSeedRow();
   </script>
-
 </body>
 </html>
